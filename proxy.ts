@@ -90,11 +90,16 @@ export async function proxy(request: NextRequest) {
       return response;
     }
 
-    // Rule - 1 : User is logged in (has access token) and trying to access auth route -> allow
+    // Rule - 1: Redirect authenticated users away from auth routes only when
+    // the session can also load user info.
     if (isAuth && isValidAccessToken) {
-      return NextResponse.redirect(
-        new URL(getDefaultDashboardRoute(userRole as UserRole), request.url),
-      );
+      const userInfo = await getUserInfo();
+
+      if (userInfo) {
+        return NextResponse.redirect(
+          new URL(getDefaultDashboardRoute(userRole as UserRole), request.url),
+        );
+      }
     }
 
     // Rule - 2 : User is trying to access reset password page

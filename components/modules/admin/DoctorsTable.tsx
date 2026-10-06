@@ -1,18 +1,16 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import DataTable from "@/components/shared/table/DataTable";
-import { getDoctors } from "@/services/doctor.service";
+import { Button } from "@/components/ui/button";
+import { deleteDoctor, getDoctors } from "@/services/doctor.service";
 import { IDoctor } from "@/types/doctor.types";
 import { useQuery } from "@tanstack/react-query";
 import { doctorColumns } from "./doctorsColumns";
 
 const DoctorsTable = () => {
-  // const doctorColumns : ColumnDef<IDoctor>[] = [
-  //   { accessorKey: "name", header: "Name"},
-  // //   { accessorKey: "specialization", header: "Specialization" },
-  //   { accessorKey: "experience", header: "Experience" },
-  // //   { accessorKey: "rating", header: "Rating" },
-  // ];
+  const router = useRouter();
 
   const { data: doctorDataResponse, isLoading } = useQuery({
     queryKey: ["doctors"],
@@ -22,68 +20,57 @@ const DoctorsTable = () => {
   const { data: doctors } = doctorDataResponse! || [];
 
   const handleView = (doctor: IDoctor) => {
-    console.log("View doctor", doctor);
+    router.push(
+      `/admin/dashboard/doctors-management/doctor-details/${doctor.id}`,
+    );
   };
 
   const handleEdit = (doctor: IDoctor) => {
-    console.log("Edit doctor", doctor);
+    router.push(`/admin/dashboard/doctors-management/doctor-edit/${doctor.id}`);
   };
 
-  const handleDelete = (doctor: IDoctor) => {
-    console.log("Delete doctor", doctor);
+  const handleDelete = async (doctor: IDoctor) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${doctor.name}?`,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await deleteDoctor(doctor.id.toString());
+
+      toast.success("Doctor deleted successfully");
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to delete doctor");
+    }
   };
-
-  // const { getHeaderGroups, getRowModel } = useReactTable({
-  //    data: doctors,
-  //    columns: doctorColumns,
-  //    getCoreRowModel: getCoreRowModel(),
-  // });
-
-  // console.log(doctorDataResponse?.data.map(doctor => doctor.name));
 
   console.log(doctors);
-  // return (
-  //   <Table>
-  //     <TableHeader>
-  //       {getHeaderGroups().map((hg) => (
-  //         <TableRow key={hg.id}>
-  //           {hg.headers.map((header) => (
-  //             <TableHead key={header.id}>
-  //               {flexRender(
-  //                 header.column.columnDef.header,
-  //                 header.getContext(),
-  //               )}
-  //             </TableHead>
-  //           ))}
-  //         </TableRow>
-  //       ))}
-  //     </TableHeader>
-  //     <TableBody>
-  //       {getRowModel().rows.map((row) => (
-  //         <TableRow key={row.id}>
-  //           {row.getVisibleCells().map((cell) => (
-  //             <TableCell key={cell.id}>
-  //               {flexRender(cell.column.columnDef.cell, cell.getContext())}
-  //             </TableCell>
-  //           ))}
-  //         </TableRow>
-  //       ))}
-  //     </TableBody>
-  //   </Table>
-  // );
 
   return (
-    <DataTable
-      data={doctors}
-      columns={doctorColumns}
-      isLoading={isLoading}
-      emptyMessage="No doctors found."
-      actions={{
-        onView: handleView,
-        onEdit: handleEdit,
-        onDelete: handleDelete,
-      }}
-    />
+    <div className="space-y-4">
+      <DataTable
+        data={doctors}
+        columns={doctorColumns}
+        isLoading={isLoading}
+        emptyMessage="No doctors found."
+        actions={{
+          onView: handleView,
+          onEdit: handleEdit,
+          onDelete: handleDelete,
+        }}
+      />
+
+      <Button
+        className="w-full"
+        onClick={() =>
+          router.push("/admin/dashboard/doctors-management/doctor-create")
+        }
+      >
+        Add New Doctor
+      </Button>
+    </div>
   );
 };
 
