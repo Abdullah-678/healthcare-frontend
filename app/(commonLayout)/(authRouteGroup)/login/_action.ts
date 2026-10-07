@@ -4,7 +4,7 @@
 import {
   getDefaultDashboardRoute,
   isValidRedirectForRole,
-  normalizeUserRole,
+  UserRole,
 } from "@/lib/authUtils";
 import { httpClient } from "@/lib/axios/httpClient";
 import { setTokenInCookies } from "@/lib/tokenUtils";
@@ -33,16 +33,7 @@ export const loginAction = async (
     );
 
     const { accessToken, refreshToken, token, user } = response.data;
-    const { role, needPasswordChange, email } = user;
-    const normalizedRole = normalizeUserRole(role);
-
-    if (!normalizedRole) {
-      return {
-        success: false,
-        message: "Login failed: the account has an invalid role.",
-      };
-    }
-
+    const { role, emailVerified, needPasswordChange, email } = user;
     await setTokenInCookies("accessToken", accessToken);
     await setTokenInCookies("refreshToken", refreshToken);
     await setTokenInCookies("better-auth.session_token", token, 24 * 60 * 60); // 1 day in seconds
@@ -57,10 +48,9 @@ export const loginAction = async (
     } else {
       // redirect(redirectPath || "/dashboard");
       const targetPath =
-        redirectPath &&
-        isValidRedirectForRole(redirectPath, normalizedRole)
+        redirectPath && isValidRedirectForRole(redirectPath, role as UserRole)
           ? redirectPath
-          : getDefaultDashboardRoute(normalizedRole);
+          : getDefaultDashboardRoute(role as UserRole);
 
       redirect(targetPath);
     }

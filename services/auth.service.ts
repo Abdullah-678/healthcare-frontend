@@ -1,5 +1,6 @@
 "use server";
 
+import { httpClient } from "@/lib/axios/httpClient";
 import { setTokenInCookies } from "@/lib/tokenUtils";
 import { cookies } from "next/headers";
 
@@ -79,3 +80,52 @@ export async function getUserInfo() {
     return null;
   }
 }
+
+export const logoutAction = async () => {
+  try {
+    await httpClient.post("/auth/logout", {});
+
+    await setTokenInCookies("accessToken", "", 0);
+    await setTokenInCookies("refreshToken", "", 0);
+    await setTokenInCookies("better-auth.session_token", "", 0);
+
+    return {
+      success: true,
+      message: "Logged out successfully",
+    };
+  } catch (error: any) {
+    console.error("Logout failed:", error);
+
+    // Clear cookies even if the backend logout request fails
+    await setTokenInCookies("accessToken", "", 0);
+    await setTokenInCookies("refreshToken", "", 0);
+    await setTokenInCookies("better-auth.session_token", "", 0);
+
+    return {
+      success: false,
+      message: error?.response?.data?.message || "Logout failed",
+    };
+  }
+};
+
+export const registerAction = async (payload: {
+  name: string;
+  email: string;
+  password: string;
+}) => {
+  try {
+    const response = await httpClient.post("/auth/register", payload);
+
+    return response;
+  } catch (error: any) {
+    console.error("Registration failed:", error);
+
+    return {
+      success: false,
+      message:
+        error?.response?.data?.message ||
+        error?.message ||
+        "Registration failed",
+    };
+  }
+};
