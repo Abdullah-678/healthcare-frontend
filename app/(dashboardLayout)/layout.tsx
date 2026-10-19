@@ -5,6 +5,8 @@ import DashboardSidebar from "@/components/modules/Dashboard/DashboardSidebar";
 import React from "react";
 import { Toaster } from "sonner";
 
+export const dynamic = "force-dynamic";
+
 const RootDashboardLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className="flex h-screen overflow-hidden">

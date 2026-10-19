@@ -3,12 +3,20 @@
 import AppointmentBarChart from "@/components/shared/AppointmentBarChart";
 import AppointmentPieChart from "@/components/shared/AppointmentPieChart";
 import StatsCard from "@/components/shared/StatsCard";
+import { getUserInfo } from "@/services/auth.service";
 import { getDashboardData } from "@/services/dashboard.service";
 import { ApiResponse } from "@/types/api.types";
 import { IAdminDashboardData } from "@/types/dashboard.types";
 import { useQuery } from "@tanstack/react-query";
+import { redirect } from "next/navigation";
 
 const AdminDashboardContent = () => {
+  // const userInfo = await getUserInfo();
+
+  // if (!userInfo) {
+  //   redirect("/login");
+  // }
+
   const { data: adminDashboardData } = useQuery({
     queryKey: ["admin-dashboard-data"],
     queryFn: getDashboardData,
@@ -17,7 +25,7 @@ const AdminDashboardContent = () => {
 
   const { data } = adminDashboardData as ApiResponse<IAdminDashboardData>;
 
-  console.log(data);
+  // console.log(data);
   return (
     <div>
       <StatsCard

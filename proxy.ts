@@ -6,23 +6,84 @@ import {
   UserRole,
 } from "./lib/authUtils";
 import { jwtUtils } from "./lib/jwtUtils";
-import { isTokenExpiringSoon } from "./lib/tokenUtils";
-import {
-  getNewTokensWithRefreshToken,
-  getUserInfo,
-} from "./services/auth.service";
+import { isTokenExpired, isTokenExpiringSoon } from "./lib/tokenUtils";
+import { getUserInfo } from "./services/auth.service";
 
-async function refreshTokenMiddleware(refreshToken: string): Promise<boolean> {
-  try {
-    const refresh = await getNewTokensWithRefreshToken(refreshToken);
-    if (!refresh) {
-      return false;
-    }
-    return true;
-  } catch (error) {
-    console.error("Error refreshing token in middleware:", error);
-    return false;
+interface RefreshedTokens {
+  accessToken: string;
+  refreshToken: string;
+  sessionToken: string;
+}
+
+const getRefreshedCookieOptions = () => ({
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax" as const,
+  path: "/",
+});
+
+const setRefreshedCookies = (
+  response: NextResponse,
+  tokens: RefreshedTokens,
+) => {
+  const cookieOptions = getRefreshedCookieOptions();
+
+  response.cookies.set("accessToken", tokens.accessToken, {
+    ...cookieOptions,
+    maxAge: 60 * 60 * 24,
+  });
+  response.cookies.set("refreshToken", tokens.refreshToken, {
+    ...cookieOptions,
+    maxAge: 60 * 60 * 24 * 7,
+  });
+  response.cookies.set("better-auth.session_token", tokens.sessionToken, {
+    ...cookieOptions,
+    maxAge: 60 * 60 * 24,
+  });
+};
+
+async function refreshTokenMiddleware(
+  refreshToken: string,
+  sessionToken: string,
+): Promise<RefreshedTokens | null> {
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+  if (!apiBaseUrl) {
+    throw new Error("NEXT_PUBLIC_API_BASE_URL is not defined");
   }
+
+  const response = await fetch(`${apiBaseUrl}/auth/refresh-token`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Cookie: `refreshToken=${refreshToken}; better-auth.session_token=${sessionToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    console.error(
+      "Token refresh failed in proxy:",
+      response.status,
+      response.statusText,
+    );
+    return null;
+  }
+
+  const { data } = await response.json();
+  const tokens: RefreshedTokens = {
+    accessToken: data.accessToken,
+    refreshToken: data.refreshToken,
+    sessionToken: data.sessionToken,
+  };
+
+  if (
+    !tokens.accessToken ||
+    !tokens.refreshToken ||
+    !tokens.sessionToken
+  ) {
+    throw new Error("Token refresh response did not include all tokens");
+  }
+
+  return tokens;
 }
 
 export async function proxy(request: NextRequest) {
@@ -30,16 +91,22 @@ export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl; // eg /dashboard, /admin/dashboard, /doctor/dashboard
     const accessToken = request.cookies.get("accessToken")?.value;
     const refreshToken = request.cookies.get("refreshToken")?.value;
+    const sessionToken = request.cookies.get(
+      "better-auth.session_token",
+    )?.value;
+    const accessTokenSecret =
+      process.env.JWT_ACCESS_SECRET ?? process.env.ACCESS_TOKEN_SECRET;
 
-    const decodedAccessToken =
-      accessToken &&
-      jwtUtils.verifyToken(accessToken, process.env.JWT_ACCESS_SECRET as string)
-        .data;
+    if (accessToken && !accessTokenSecret) {
+      throw new Error("JWT_ACCESS_SECRET or ACCESS_TOKEN_SECRET is required");
+    }
 
-    const isValidAccessToken =
-      accessToken &&
-      jwtUtils.verifyToken(accessToken, process.env.JWT_ACCESS_SECRET as string)
-        .success;
+    const accessTokenVerification =
+      accessToken && accessTokenSecret
+        ? jwtUtils.verifyToken(accessToken, accessTokenSecret)
+        : null;
+    const decodedAccessToken = accessTokenVerification?.data;
+    const isValidAccessToken = accessTokenVerification?.success ?? false;
 
     let userRole: UserRole | null = null;
 
@@ -58,36 +125,92 @@ export async function proxy(request: NextRequest) {
 
     //proactively refresh token if refresh token exists and access token is expired or about to expire
     if (
-      isValidAccessToken &&
+      accessToken &&
       refreshToken &&
-      (await isTokenExpiringSoon(accessToken))
+      sessionToken &&
+      ((await isTokenExpiringSoon(accessToken)) ||
+        (await isTokenExpired(accessToken)))
     ) {
       const requestHeaders = new Headers(request.headers);
 
-      const response = NextResponse.next({
-        request: {
-          headers: requestHeaders,
-        },
-      });
-
       try {
-        const refreshed = await refreshTokenMiddleware(refreshToken);
+        const refreshedTokens = await refreshTokenMiddleware(
+          refreshToken,
+          sessionToken,
+        );
 
-        if (refreshed) {
-          requestHeaders.set("x-token-refreshed", "1");
+        if (refreshedTokens) {
+          if (!accessTokenSecret) {
+            throw new Error(
+              "JWT_ACCESS_SECRET or ACCESS_TOKEN_SECRET is required",
+            );
+          }
+
+          const forwardedCookies = new Map(
+            request.cookies.getAll().map(({ name, value }) => [name, value]),
+          );
+          forwardedCookies.set("accessToken", refreshedTokens.accessToken);
+          forwardedCookies.set("refreshToken", refreshedTokens.refreshToken);
+          forwardedCookies.set(
+            "better-auth.session_token",
+            refreshedTokens.sessionToken,
+          );
+          requestHeaders.set(
+            "cookie",
+            Array.from(forwardedCookies, ([name, value]) => `${name}=${value}`)
+              .join("; "),
+          );
+
+          const refreshedAccessToken = jwtUtils.verifyToken(
+            refreshedTokens.accessToken,
+            accessTokenSecret,
+          );
+          const refreshedUserRole =
+            refreshedAccessToken.data?.role === "SUPERADMIN"
+              ? "ADMIN"
+              : (refreshedAccessToken.data?.role as UserRole | undefined);
+
+          if (!refreshedAccessToken.success || !refreshedUserRole) {
+            throw new Error("Refreshed access token is invalid");
+          }
+
+          const routeRequiresRole =
+            routerOwner === "ADMIN" ||
+            routerOwner === "DOCTOR" ||
+            routerOwner === "PATIENT";
+          if (routeRequiresRole && routerOwner !== refreshedUserRole) {
+            const redirectResponse = NextResponse.redirect(
+              new URL(
+                getDefaultDashboardRoute(refreshedUserRole),
+                request.url,
+              ),
+            );
+            setRefreshedCookies(redirectResponse, refreshedTokens);
+            return redirectResponse;
+          }
+
+          if (isAuth) {
+            const redirectResponse = NextResponse.redirect(
+              new URL(
+                getDefaultDashboardRoute(refreshedUserRole),
+                request.url,
+              ),
+            );
+            setRefreshedCookies(redirectResponse, refreshedTokens);
+            return redirectResponse;
+          }
+
+          const nextResponse = NextResponse.next({
+            request: {
+              headers: requestHeaders,
+            },
+          });
+          setRefreshedCookies(nextResponse, refreshedTokens);
+          return nextResponse;
         }
-
-        return NextResponse.next({
-          request: {
-            headers: requestHeaders,
-          },
-          headers: response.headers,
-        });
       } catch (error) {
         console.error("Error refreshing token:", error);
       }
-
-      return response;
     }
 
     // Rule - 1: Redirect authenticated users away from auth routes only when

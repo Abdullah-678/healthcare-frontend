@@ -1,4 +1,5 @@
 import AdminDashboardContent from "@/components/modules/Dashboard/AdminDashboardContent";
+import { getUserInfo } from "@/services/auth.service";
 import { getDashboardData } from "@/services/dashboard.service";
 // import { getDashboardData } from "@/services/dashboard.services";
 import { ApiResponse } from "@/types/api.types";
@@ -8,8 +9,15 @@ import {
   HydrationBoundary,
   QueryClient,
 } from "@tanstack/react-query";
+import { redirect } from "next/navigation";
 
 const AdminDashboardPage = async () => {
+  const userInfo = await getUserInfo();
+
+  if (!userInfo) {
+    redirect("/login");
+  }
+
   const queryClient = new QueryClient();
 
   await queryClient.prefetchQuery({

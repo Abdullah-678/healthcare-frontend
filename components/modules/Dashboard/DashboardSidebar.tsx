@@ -3,10 +3,14 @@ import { getNavItemsByRole } from "@/lib/navItems";
 import { getUserInfo } from "@/services/auth.service";
 import { NavSection } from "@/types/dashboard.types";
 import DashboardSidebarContent from "./DashboardSidebarContent";
+import { redirect } from "next/navigation";
 
 const DashboardSidebar = async () => {
   const userInfo = await getUserInfo();
-  console.log("User Info in DashboardSidebar:", userInfo);
+  if (!userInfo) {
+    redirect("/login");
+  }
+  // console.log("User Info in DashboardSidebar:", userInfo);
   const navItems: NavSection[] = getNavItemsByRole(userInfo.role);
 
   const dashboardHome = getDefaultDashboardRoute(userInfo.role);

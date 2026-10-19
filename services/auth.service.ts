@@ -3,6 +3,7 @@
 import { httpClient } from "@/lib/axios/httpClient";
 import { setTokenInCookies } from "@/lib/tokenUtils";
 import { cookies } from "next/headers";
+import axios from "axios";
 
 const BASE_API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -14,33 +15,46 @@ export async function getNewTokensWithRefreshToken(
   refreshToken: string,
 ): Promise<boolean> {
   try {
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get("better-auth.session_token")?.value;
+    if (!sessionToken) {
+      console.error("Token refresh failed: session cookie is missing");
+      return false;
+    }
+
     const res = await fetch(`${BASE_API_URL}/auth/refresh-token`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Cookie: `refreshToken=${refreshToken}`,
+        Cookie: `refreshToken=${refreshToken}; better-auth.session_token=${sessionToken}`,
       },
     });
 
     if (!res.ok) {
+      console.error("Token refresh failed:", res.status, res.statusText);
       return false;
     }
 
     const { data } = await res.json();
 
-    const { accessToken, refreshToken: newRefreshToken, token } = data;
+    const {
+      accessToken,
+      refreshToken: newRefreshToken,
+      sessionToken: newSessionToken,
+    } = data;
 
-    if (accessToken) {
-      await setTokenInCookies("accessToken", accessToken);
+    if (!accessToken || !newRefreshToken || !newSessionToken) {
+      console.error("Token refresh failed: response did not include all tokens");
+      return false;
     }
 
-    if (newRefreshToken) {
-      await setTokenInCookies("refreshToken", newRefreshToken);
-    }
-
-    if (token) {
-      await setTokenInCookies("better-auth.session_token", token, 24 * 60 * 60); // 1 day in seconds
-    }
+    await setTokenInCookies("accessToken", accessToken);
+    await setTokenInCookies("refreshToken", newRefreshToken);
+    await setTokenInCookies(
+      "better-auth.session_token",
+      newSessionToken,
+      24 * 60 * 60,
+    );
 
     return true;
   } catch (error) {
@@ -55,7 +69,7 @@ export async function getUserInfo() {
     const accessToken = cookieStore.get("accessToken")?.value;
     const sessionToken = cookieStore.get("better-auth.session_token")?.value;
 
-    if (!accessToken) {
+    if (!accessToken || !sessionToken) {
       return null;
     }
 
@@ -88,22 +102,27 @@ export const logoutAction = async () => {
     await setTokenInCookies("accessToken", "", 0);
     await setTokenInCookies("refreshToken", "", 0);
     await setTokenInCookies("better-auth.session_token", "", 0);
+    await setTokenInCookies("better-auth.session_data", "", 0);
 
     return {
       success: true,
       message: "Logged out successfully",
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Logout failed:", error);
 
     // Clear cookies even if the backend logout request fails
     await setTokenInCookies("accessToken", "", 0);
     await setTokenInCookies("refreshToken", "", 0);
     await setTokenInCookies("better-auth.session_token", "", 0);
+    await setTokenInCookies("better-auth.session_data", "", 0);
 
     return {
       success: false,
-      message: error?.response?.data?.message || "Logout failed",
+      message:
+        (axios.isAxiosError<{ message?: string }>(error)
+          ? error.response?.data?.message
+          : undefined) || "Logout failed",
     };
   }
 };
@@ -117,14 +136,16 @@ export const registerAction = async (payload: {
     const response = await httpClient.post("/auth/register", payload);
 
     return response;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Registration failed:", error);
 
     return {
       success: false,
       message:
-        error?.response?.data?.message ||
-        error?.message ||
+        (axios.isAxiosError<{ message?: string }>(error)
+          ? error.response?.data?.message
+          : undefined) ||
+        (error instanceof Error ? error.message : undefined) ||
         "Registration failed",
     };
   }
