@@ -1,6 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use server";
 
+import axios from "axios";
 import {
   getDefaultDashboardRoute,
   isValidRedirectForRole,
@@ -9,14 +9,16 @@ import {
 import { httpClient } from "@/lib/axios/httpClient";
 import { setTokenInCookies } from "@/lib/tokenUtils";
 import { ApiErrorResponse } from "@/types/api.types";
-import { ILoginResponse } from "@/types/auth.types";
 import { ILoginPayload, loginZodSchema } from "@/zod/auth.validation";
-import { redirect } from "next/navigation";
+
+export type LoginActionResult =
+  | { success: true; redirectTo: string }
+  | { success: false; message: string };
 
 export const loginAction = async (
   payload: ILoginPayload,
   redirectPath?: string,
-): Promise<ILoginResponse | ApiErrorResponse> => {
+): Promise<LoginActionResult> => {
   const parsedPayload = loginZodSchema.safeParse(payload);
 
   if (!parsedPayload.success) {
@@ -26,56 +28,58 @@ export const loginAction = async (
       message: firstError,
     };
   }
+
   try {
-    const response = await httpClient.post<ILoginResponse>(
+    const response = await httpClient.post<{
+      accessToken: string;
+      refreshToken: string;
+      token: string;
+      user: {
+        needPasswordChange: boolean;
+        email: string;
+        role: string;
+      };
+    }>(
       "/auth/login",
       parsedPayload.data,
     );
 
     const { accessToken, refreshToken, token, user } = response.data;
-    const { role, emailVerified, needPasswordChange, email } = user;
+    const { role, needPasswordChange, email } = user;
     await setTokenInCookies("accessToken", accessToken);
     await setTokenInCookies("refreshToken", refreshToken);
     await setTokenInCookies("better-auth.session_token", token, 24 * 60 * 60); // 1 day in seconds
 
-    // if(!emailVerified){
-    //     redirect("/verify-email");
-    // }else // in the catch block
-
     if (needPasswordChange) {
-      //TODO : refactoring
-      redirect(`/reset-password?email=${email}`);
-    } else {
-      // redirect(redirectPath || "/dashboard");
-      const targetPath =
-        redirectPath && isValidRedirectForRole(redirectPath, role as UserRole)
-          ? redirectPath
-          : getDefaultDashboardRoute(role as UserRole);
-
-      redirect(targetPath);
-    }
-  } catch (error: any) {
-    console.log(error, "error");
-    if (
-      error &&
-      typeof error === "object" &&
-      "digest" in error &&
-      typeof error.digest === "string" &&
-      error.digest.startsWith("NEXT_REDIRECT")
-    ) {
-      throw error;
+      return {
+        success: true,
+        redirectTo: `/reset-password?email=${encodeURIComponent(email)}`,
+      };
     }
 
+    const targetPath =
+      redirectPath && isValidRedirectForRole(redirectPath, role as UserRole)
+        ? redirectPath
+        : getDefaultDashboardRoute(role as UserRole);
+
+    return { success: true, redirectTo: targetPath };
+  } catch (error: unknown) {
     if (
-      error &&
-      error.response &&
-      error.response.data.message === "Email not verified"
+      axios.isAxiosError<ApiErrorResponse>(error) &&
+      error.response?.data.message === "Email not verified"
     ) {
-      redirect(`/verify-email?email=${payload.email}`);
+      return {
+        success: true,
+        redirectTo: `/verify-email?email=${encodeURIComponent(payload.email)}`,
+      };
     }
+
+    console.error("Login failed:", error);
     return {
       success: false,
-      message: `Login failed: ${error.message}`,
+      message: `Login failed: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`,
     };
   }
 };

@@ -1,9 +1,11 @@
 "use server";
 
 import { httpClient } from "@/lib/axios/httpClient";
+import { deleteCookie } from "@/lib/cookieUtils";
 import { setTokenInCookies } from "@/lib/tokenUtils";
 import { cookies } from "next/headers";
 import axios from "axios";
+import { redirect } from "next/navigation";
 
 const BASE_API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -96,35 +98,45 @@ export async function getUserInfo() {
 }
 
 export const logoutAction = async () => {
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore
+    .getAll()
+    .map((cookie) => `${cookie.name}=${cookie.value}`)
+    .join("; ");
+
   try {
-    await httpClient.post("/auth/logout", {});
+    const response = await fetch(`${BASE_API_URL}/auth/logout`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Cookie: cookieHeader,
+      },
+      body: JSON.stringify({}),
+    });
 
-    await setTokenInCookies("accessToken", "", 0);
-    await setTokenInCookies("refreshToken", "", 0);
-    await setTokenInCookies("better-auth.session_token", "", 0);
-    await setTokenInCookies("better-auth.session_data", "", 0);
-
-    return {
-      success: true,
-      message: "Logged out successfully",
-    };
-  } catch (error: unknown) {
-    console.error("Logout failed:", error);
-
-    // Clear cookies even if the backend logout request fails
-    await setTokenInCookies("accessToken", "", 0);
-    await setTokenInCookies("refreshToken", "", 0);
-    await setTokenInCookies("better-auth.session_token", "", 0);
-    await setTokenInCookies("better-auth.session_data", "", 0);
-
-    return {
-      success: false,
-      message:
-        (axios.isAxiosError<{ message?: string }>(error)
-          ? error.response?.data?.message
-          : undefined) || "Logout failed",
-    };
+    if (!response.ok) {
+      console.warn("Backend logout request failed:", response.status);
+    }
+  } catch (error) {
+    console.warn(
+      "Backend logout request could not be completed:",
+      error instanceof Error ? error.message : "Unknown error",
+    );
   }
+
+  try {
+    await Promise.all([
+      deleteCookie("accessToken"),
+      deleteCookie("refreshToken"),
+      deleteCookie("better-auth.session_token"),
+      deleteCookie("better-auth.session_data"),
+    ]);
+  } catch (cookieError) {
+    console.error("Failed to clear auth cookies during logout.", cookieError);
+    throw cookieError;
+  }
+
+  redirect("/login");
 };
 
 export const registerAction = async (payload: {

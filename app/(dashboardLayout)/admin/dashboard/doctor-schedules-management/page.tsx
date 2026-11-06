@@ -1,5 +1,5 @@
-const DoctorSchedulesManagementPage = () => {
-  return <div>DoctorSchedulesManagementPage</div>;
-};
+import DoctorSchedulesManagement from "@/components/modules/admin/DoctorSchedulesManagement";
+
+const DoctorSchedulesManagementPage = () => <DoctorSchedulesManagement />;
 
 export default DoctorSchedulesManagementPage;

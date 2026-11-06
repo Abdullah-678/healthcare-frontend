@@ -1,6 +1,7 @@
 "use server";
 
 import { httpClient } from "@/lib/axios/httpClient";
+import axios from "axios";
 
 export interface PatientPrescription {
   id: string;
@@ -53,7 +54,15 @@ export const getMyPatientRecords = async (): Promise<PatientRecordResponse> => {
 
     return response.data;
   } catch (error) {
+    if (
+      axios.isAxiosError(error) &&
+      (error.response?.status === 401 || error.response?.status === 403)
+    ) {
+      console.warn("Patient records are unavailable because the session is unauthenticated.");
+      return { patient: null };
+    }
+
     console.error("Error fetching patient records:", error);
-    throw error;
+    return { patient: null };
   }
 };

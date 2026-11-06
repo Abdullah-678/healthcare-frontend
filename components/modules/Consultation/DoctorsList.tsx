@@ -1,6 +1,7 @@
 "use client";
 
 import { getDoctors } from "@/services/doctor.service";
+import { IDoctor } from "@/types/doctor.types";
 import { useQuery } from "@tanstack/react-query";
 
 const DoctorsList = () => {
@@ -25,7 +26,7 @@ const DoctorsList = () => {
 
         {/* Doctor Cards */}
         <div className="grid grid-cols-1 justify-items-center gap-8 sm:grid-cols-2 lg:grid-cols-3">
-          {doctorData?.data.map((doctor: any) => (
+          {doctorData?.data.map((doctor: IDoctor) => (
             <div
               key={doctor.id}
               className="w-full max-w-sm overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl"
@@ -61,7 +62,9 @@ const DoctorsList = () => {
 
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-gray-500">Phone</span>
-                    <span className="text-black">{doctor.phone || "N/A"}</span>
+                    <span className="text-black">
+                      {doctor.contactNumber || "N/A"}
+                    </span>
                   </div>
 
                   <div className="flex items-center justify-between">
@@ -73,7 +76,7 @@ const DoctorsList = () => {
                     <span className="font-semibold text-gray-500">Status</span>
 
                     <span className="rounded-full bg-black px-3 py-1 text-xs font-semibold text-white">
-                      {doctor.status || "N/A"}
+                      {doctor.user.status}
                     </span>
                   </div>
                 </div>

@@ -64,7 +64,13 @@ const httpPost = async <TData>(
     });
     return response.data;
   } catch (error) {
-    console.error(`POST request to ${endpoint} failed:`, error);
+    const isEmailConflict =
+      (endpoint === "/admins" || endpoint === "/users/create-doctor") &&
+      axios.isAxiosError(error) &&
+      error.response?.status === 409;
+    if (!isEmailConflict) {
+      console.error(`POST request to ${endpoint} failed:`, error);
+    }
     throw error;
   }
 };

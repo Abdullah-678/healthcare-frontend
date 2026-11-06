@@ -1,7 +1,38 @@
 "use server";
 
+import axios from "axios";
 import { httpClient } from "@/lib/axios/httpClient";
-import { ICreateDoctorPayload, IDoctor } from "@/types/doctor.types";
+import {
+  ICreateDoctorPayload,
+  IDoctor,
+  IUpdateDoctorPayload,
+} from "@/types/doctor.types";
+
+type DoctorMutationResult =
+  | { success: true }
+  | { success: false; message: string };
+
+const getMutationErrorMessage = (error: unknown) => {
+  if (axios.isAxiosError(error)) {
+    if (error.response?.status === 409) {
+      return "This email is already in use. Please use a different email address.";
+    }
+
+    const data = error.response?.data as
+      | {
+          message?: string;
+          errorSources?: Array<{ path?: string; message: string }>;
+        }
+      | undefined;
+    const validationMessage = data?.errorSources
+      ?.map(({ path, message }) => (path ? `${path}: ${message}` : message))
+      .join(". ");
+
+    return validationMessage || data?.message || error.message;
+  }
+
+  return error instanceof Error ? error.message : "Unexpected error";
+};
 
 export const getDoctors = async () => {
   try {
@@ -15,7 +46,7 @@ export const getDoctors = async () => {
 
 export const deleteDoctor = async (id: string) => {
   try {
-    const response = await httpClient.delete(`/doctors/${id}`);
+    const response = await httpClient.delete(`/doctors/${encodeURIComponent(id)}`);
     return response;
   } catch (error) {
     console.log("Error deleting doctor:", error);
@@ -25,7 +56,9 @@ export const deleteDoctor = async (id: string) => {
 
 export const getDoctorById = async (id: string) => {
   try {
-    const doctor = await httpClient.get<IDoctor>(`/doctors/${id}`);
+    const doctor = await httpClient.get<IDoctor>(
+      `/doctors/${encodeURIComponent(id)}`,
+    );
     return doctor;
   } catch (error) {
     console.log("Error fetching doctor:", error);
@@ -33,24 +66,28 @@ export const getDoctorById = async (id: string) => {
   }
 };
 
-export const updateDoctor = async (id: string, data: Partial<IDoctor>) => {
+export const updateDoctor = async (
+  id: string,
+  data: IUpdateDoctorPayload,
+): Promise<DoctorMutationResult> => {
   try {
-    const doctor = await httpClient.put<IDoctor>(`/doctors/${id}`, data);
-
-    return doctor;
+    await httpClient.put<IDoctor>(
+      `/doctors/${encodeURIComponent(id)}`,
+      data,
+    );
+    return { success: true };
   } catch (error) {
-    console.log("Error updating doctor:", error);
-    throw error;
+    return { success: false, message: getMutationErrorMessage(error) };
   }
 };
 
-export const createDoctor = async (data: ICreateDoctorPayload) => {
+export const createDoctor = async (
+  data: ICreateDoctorPayload,
+): Promise<DoctorMutationResult> => {
   try {
-    const doctor = await httpClient.post<IDoctor>("/users/create-doctor", data);
-
-    return doctor;
+    await httpClient.post<IDoctor>("/users/create-doctor", data);
+    return { success: true };
   } catch (error) {
-    console.log("Error creating doctor:", error);
-    throw error;
+    return { success: false, message: getMutationErrorMessage(error) };
   }
 };

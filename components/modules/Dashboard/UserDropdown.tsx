@@ -13,7 +13,6 @@ import { logoutAction } from "@/services/auth.service";
 import { UserInfo } from "@/types/user.types";
 import { Key, LogOut, User } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 interface UserDropdownProps {
@@ -21,21 +20,9 @@ interface UserDropdownProps {
 }
 
 const UserDropdown = ({ userInfo }: UserDropdownProps) => {
-  const router = useRouter();
-
   const handleLogout = async () => {
     try {
-      const result = await logoutAction();
-
-      if (!result.success) {
-        toast.error(result.message);
-        return;
-      }
-
-      toast.success("Logged out successfully");
-
-      router.push("/login");
-      router.refresh();
+      await logoutAction();
     } catch (error) {
       console.error("Logout failed:", error);
       toast.error("Logout failed");

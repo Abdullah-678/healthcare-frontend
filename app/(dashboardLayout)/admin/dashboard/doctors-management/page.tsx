@@ -12,14 +12,21 @@ const DoctorsManagementPage = async () => {
   await queryClient.prefetchQuery({
     queryKey: ["doctors"],
     queryFn: getDoctors,
-    staleTime: 1000 * 60 * 60, // 1 hour
-    gcTime: 1000 * 60 * 60 * 6, // 1 hour
+    staleTime: 60 * 1000,
   });
 
   return (
-    <HydrationBoundary state={dehydrate(queryClient)}>
-      <DoctorsTable />
-    </HydrationBoundary>
+    <section className="space-y-6">
+      <header>
+        <h1 className="text-2xl font-bold">Doctor Management</h1>
+        <p className="text-sm text-muted-foreground">
+          View and manage doctor accounts.
+        </p>
+      </header>
+      <HydrationBoundary state={dehydrate(queryClient)}>
+        <DoctorsTable />
+      </HydrationBoundary>
+    </section>
   );
 };
 

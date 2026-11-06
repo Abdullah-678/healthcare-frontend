@@ -8,7 +8,6 @@ import {
 } from "next/navigation";
 import {
   useCallback,
-  useEffect,
   useMemo,
   useState,
   useTransition,
@@ -84,14 +83,14 @@ export const useServerManagedDataTable = ({
     useState<SortingState>(sortingStateFromUrl);
   const [optimisticPaginationState, setOptimisticPaginationState] =
     useState<PaginationState>(paginationStateFromUrl);
+  const [previousQueryString, setPreviousQueryString] =
+    useState(queryStringFromUrl);
 
-  useEffect(() => {
+  if (previousQueryString !== queryStringFromUrl) {
+    setPreviousQueryString(queryStringFromUrl);
     setOptimisticSortingState(sortingStateFromUrl);
-  }, [sortingStateFromUrl]);
-
-  useEffect(() => {
     setOptimisticPaginationState(paginationStateFromUrl);
-  }, [paginationStateFromUrl]);
+  }
 
   const updateUrlAndRefresh = useCallback(
     (params: URLSearchParams) => {

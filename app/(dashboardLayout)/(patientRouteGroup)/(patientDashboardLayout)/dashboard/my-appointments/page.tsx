@@ -1,5 +1,6 @@
 import { CalendarDays, Clock3, Stethoscope } from "lucide-react";
 import { getMyAppointments } from "@/services/appointment.service";
+import AppointmentPaymentAction from "@/components/modules/patient/AppointmentPaymentAction";
 
 const MyAppointmentPage = async () => {
   const appointments = await getMyAppointments();
@@ -118,6 +119,22 @@ const MyAppointmentPage = async () => {
                       Consultation with {appointment.doctor.name}
                     </p>
                   </div>
+                </div>
+
+                <div className="mt-5 flex flex-col gap-3 border-t border-gray-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm text-gray-600">
+                    Payment status:{" "}
+                    <span className="font-semibold text-gray-900">
+                      {appointment.paymentStatus ?? "Unknown"}
+                    </span>
+                  </p>
+                  {appointment.schedule &&
+                    appointment.status !== "CANCELED" &&
+                    appointment.paymentStatus !== "PAID" && (
+                      <AppointmentPaymentAction
+                        appointmentId={appointment.id}
+                      />
+                    )}
                 </div>
               </li>
             ))}

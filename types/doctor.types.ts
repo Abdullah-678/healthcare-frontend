@@ -1,4 +1,4 @@
-enum Gender {
+export enum Gender {
   MALE = "MALE",
   FEMALE = "FEMALE",
   OTHER = "OTHER",
@@ -57,4 +57,22 @@ export interface ICreateDoctorPayload {
     designation: string;
   };
   specialties: string[];
+}
+
+export interface IUpdateDoctorPayload {
+  name: string;
+  profilePhoto?: string;
+  contactNumber?: string;
+  address?: string;
+  registrationNumber: string;
+  experience?: number;
+  gender: Gender;
+  appointmentFee: number;
+  qualification: string;
+  currentWorkingPlace: string;
+  designation: string;
+  specialties?: Array<{
+    specialtyId: string;
+    shouldDelete?: boolean;
+  }>;
 }

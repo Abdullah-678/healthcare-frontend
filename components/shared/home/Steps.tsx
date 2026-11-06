@@ -33,7 +33,7 @@ export default function Steps() {
           </h2>
           <p className="text-muted-foreground text-lg">
             Follow these simple steps to start your healthcare journey with us.
-            It's fast, easy, and secure.
+            It&apos;s fast, easy, and secure.
           </p>
         </div>
 

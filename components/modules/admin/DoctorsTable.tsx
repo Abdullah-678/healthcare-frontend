@@ -6,18 +6,23 @@ import DataTable from "@/components/shared/table/DataTable";
 import { Button } from "@/components/ui/button";
 import { deleteDoctor, getDoctors } from "@/services/doctor.service";
 import { IDoctor } from "@/types/doctor.types";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { doctorColumns } from "./doctorsColumns";
 
 const DoctorsTable = () => {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
-  const { data: doctorDataResponse, isLoading } = useQuery({
+  const {
+    data: doctorDataResponse,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ["doctors"],
     queryFn: getDoctors,
   });
 
-  const { data: doctors } = doctorDataResponse! || [];
+  const doctors = doctorDataResponse?.data ?? [];
 
   const handleView = (doctor: IDoctor) => {
     router.push(
@@ -38,15 +43,17 @@ const DoctorsTable = () => {
 
     try {
       await deleteDoctor(doctor.id.toString());
-
+      await queryClient.invalidateQueries({ queryKey: ["doctors"] });
       toast.success("Doctor deleted successfully");
     } catch (error) {
-      console.error(error);
+      console.error("Failed to delete doctor:", error);
       toast.error("Failed to delete doctor");
     }
   };
 
-  console.log(doctors);
+  if (isError) {
+    return <p className="text-sm text-destructive">Unable to load doctors.</p>;
+  }
 
   return (
     <div className="space-y-4">

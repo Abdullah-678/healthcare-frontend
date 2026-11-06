@@ -1,5 +1,4 @@
 "use client";
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { loginAction } from "@/app/(commonLayout)/(authRouteGroup)/login/_action";
 import AppField from "@/components/shared/form/AppField";
 import AppSubmitButton from "@/components/shared/form/AppSubmitButton";
@@ -18,6 +17,7 @@ import { useForm } from "@tanstack/react-form";
 import { useMutation } from "@tanstack/react-query";
 import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 interface LoginFormProps {
@@ -25,8 +25,7 @@ interface LoginFormProps {
 }
 
 const LoginForm = ({ redirectPath }: LoginFormProps) => {
-  // const queryClient = useQueryClient();
-
+  const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -43,15 +42,21 @@ const LoginForm = ({ redirectPath }: LoginFormProps) => {
     onSubmit: async ({ value }) => {
       setServerError(null);
       try {
-        const result = (await mutateAsync(value)) as any;
+        const result = await mutateAsync(value);
 
         if (!result.success) {
           setServerError(result.message || "Login failed");
           return;
         }
-      } catch (error: any) {
-        console.log(`Login failed: ${error.message}`);
-        setServerError(`Login failed: ${error.message}`);
+
+        router.push(result.redirectTo);
+      } catch (error: unknown) {
+        console.error("Login failed:", error);
+        setServerError(
+          `Login failed: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`,
+        );
       }
     },
   });

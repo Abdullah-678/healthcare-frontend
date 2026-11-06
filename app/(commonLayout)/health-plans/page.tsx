@@ -123,7 +123,7 @@ const HealthPlansPage = () => {
               {/* Features */}
               <div className="flex flex-1 flex-col px-7 py-6">
                 <p className="mb-4 text-sm font-semibold text-black">
-                  What's included
+                  What&apos;s included
                 </p>
 
                 <div className="space-y-4">

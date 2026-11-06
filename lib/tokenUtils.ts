@@ -25,15 +25,18 @@ const getTokenSecondsRemaining = (token: string): number => {
 export const setTokenInCookies = async (
   name: string,
   token: string,
-  fallbackMaxAgeInSeconds = 60 * 60 * 24, // 1 days
+  fallbackMaxAgeInSeconds = 60 * 60 * 24, // 1 day
 ) => {
-  let maxAgeInSeconds;
+  let maxAgeInSeconds = fallbackMaxAgeInSeconds;
 
-  if (name !== "better-auth.session_token") {
-    maxAgeInSeconds = getTokenSecondsRemaining(token);
+  if (!token) {
+    maxAgeInSeconds = 0;
+  } else if (name !== "better-auth.session_token") {
+    const remainingSeconds = getTokenSecondsRemaining(token);
+    maxAgeInSeconds = remainingSeconds > 0 ? remainingSeconds : fallbackMaxAgeInSeconds;
   }
 
-  await setCookie(name, token, maxAgeInSeconds || fallbackMaxAgeInSeconds);
+  await setCookie(name, token, maxAgeInSeconds);
 };
 
 export async function isTokenExpiringSoon(

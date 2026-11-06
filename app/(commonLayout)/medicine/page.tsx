@@ -226,7 +226,7 @@ const MedicinePage = () => {
               <h2 className="text-xl font-bold">Safe and Reliable Medicines</h2>
 
               <p className="mt-2 text-sm leading-6 text-gray-400">
-                Always follow your doctor's prescription and recommended dosage.
+                Always follow your doctor&apos;s prescription and recommended dosage.
                 Consult a healthcare professional before starting a new
                 medicine.
               </p>

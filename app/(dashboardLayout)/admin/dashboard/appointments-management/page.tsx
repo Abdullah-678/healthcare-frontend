@@ -1,5 +1,5 @@
-const AppointmentManagementPage = () => {
-  return <div>AppointmentManagementPage</div>;
-};
+import AppointmentsManagement from "@/components/modules/admin/AppointmentsManagement";
+
+const AppointmentManagementPage = () => <AppointmentsManagement />;
 
 export default AppointmentManagementPage;

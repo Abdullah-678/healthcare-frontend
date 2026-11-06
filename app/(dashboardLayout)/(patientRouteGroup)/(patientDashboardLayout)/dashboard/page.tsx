@@ -26,7 +26,7 @@ const PatientDashboardPage = () => {
               </p>
 
               <h1 className="mt-2 text-3xl font-bold sm:text-4xl">
-                Good morning
+                Welcome Back
               </h1>
 
               <p className="mt-3 max-w-xl text-sm leading-6 text-gray-400">
