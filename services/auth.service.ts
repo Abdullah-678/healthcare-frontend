@@ -5,7 +5,6 @@ import { deleteCookie } from "@/lib/cookieUtils";
 import { setTokenInCookies } from "@/lib/tokenUtils";
 import { cookies } from "next/headers";
 import axios from "axios";
-import { redirect } from "next/navigation";
 
 const BASE_API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -136,7 +135,6 @@ export const logoutAction = async () => {
     throw cookieError;
   }
 
-  redirect("/login");
 };
 
 export const registerAction = async (payload: {
