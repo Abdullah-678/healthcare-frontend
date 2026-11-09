@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Healthcare Management System
 
-## Getting Started
+A comprehensive web-based healthcare management platform designed to simplify and organize healthcare services by connecting patients, doctors, and healthcare providers through a centralized digital system.
 
-First, run the development server:
+The platform aims to improve healthcare accessibility, streamline appointment management, and provide an organized environment for managing healthcare-related activities.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 🌐 Live Application
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+[**Visit Healthcare Management System**](https://healthcare-frontend-two-umber.vercel.app)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🎯 Project Overview
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The Healthcare Management System provides a digital platform where patients can access healthcare services, doctors can manage their professional activities, and administrators can oversee the overall system.
 
-## Learn More
+It focuses on creating a convenient, user-friendly, and organized healthcare experience through modern web technologies.
 
-To learn more about Next.js, take a look at the following resources:
+## ✨ Key Modules
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Authentication & Authorization:** Secure user authentication and role-based access.
+- **Patient Management:** Manage patient information and healthcare activities.
+- **Doctor Management:** Organize doctor profiles and specializations.
+- **Appointment Management:** Manage and track patient appointments.
+- **Diagnostics:** Access diagnostic and healthcare-related services.
+- **Medicine Management:** Organize medicine-related information and services.
+- **Healthcare Plans:** Explore healthcare plans and available services.
+- **NGO Services:** Connect with healthcare-related nonprofit organizations.
+- **Payment Integration:** Support online payment processing.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🛠️ Technology Stack
 
-## Deploy on Vercel
+**Frontend**
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS
+- shadcn/ui
+- TanStack React Query
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+**Backend**
+- Node.js
+- Express.js
+- TypeScript
+- Prisma ORM
+- PostgreSQL
+- Better Auth
+- Stripe
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🚀 Deployment
+
+- Frontend: Vercel
+- Backend: Vercel
+- Database: Neon PostgreSQL
+
+## 👨‍💻 Developer
+
+**Abdullah**
+
